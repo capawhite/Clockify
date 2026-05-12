@@ -1,3 +1,4 @@
+import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { ensureTestingWorkspaceAccess } from "@/lib/auth/ensure-testing-workspace";
 
@@ -8,13 +9,19 @@ export type WorkspaceProfile = {
   is_active: boolean;
 };
 
-export async function getWorkspaceContext() {
+export type WorkspaceContextResult = {
+  user: User | null;
+  profile: WorkspaceProfile | null;
+  workspaceAssignError?: string | null;
+};
+
+export async function getWorkspaceContext(): Promise<WorkspaceContextResult> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { user: null as null, profile: null as null };
+    return { user: null, profile: null };
   }
 
   const { data: initialProfile, error } = await supabase
@@ -28,9 +35,13 @@ export async function getWorkspaceContext() {
   }
 
   let profile = initialProfile;
+  let workspaceAssignError: string | null = null;
 
   if (!profile || !profile.workspace_id) {
-    await ensureTestingWorkspaceAccess(user.id);
+    const ensured = await ensureTestingWorkspaceAccess(user.id);
+    if (!ensured.ok) {
+      workspaceAssignError = ensured.error;
+    }
     const refetch = await supabase
       .from("profiles")
       .select("workspace_id, role, full_name, is_active")
@@ -40,11 +51,22 @@ export async function getWorkspaceContext() {
       throw new Error(refetch.error.message);
     }
     profile = refetch.data;
+    if (
+      (!profile || !profile.workspace_id) &&
+      ensured.ok &&
+      !workspaceAssignError
+    ) {
+      workspaceAssignError =
+        "Workspace was not assigned after bootstrap; run the SQL migration 20260514120000_profiles_update_service_role_bypass.sql in Supabase, or attach your profile manually.";
+    }
   }
 
   return {
     user,
     profile: profile as WorkspaceProfile | null,
+    ...(workspaceAssignError
+      ? { workspaceAssignError }
+      : {}),
   };
 }
 

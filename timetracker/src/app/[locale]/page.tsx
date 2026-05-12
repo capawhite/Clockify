@@ -19,13 +19,15 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const tAuth = await getTranslations("auth");
   const tHome = await getTranslations("home");
   const tNav = await getTranslations("nav");
   const tCommon = await getTranslations("common");
   const signOutAction = await getSignOutActionPath();
-  const { user, profile } = await getWorkspaceContext();
+  const { user, profile, workspaceAssignError } = await getWorkspaceContext();
 
   const inWorkspace = Boolean(profile?.workspace_id);
   const isAdmin = profile?.role === "admin";
@@ -266,6 +268,11 @@ export default async function Home() {
                   <p className="text-xs text-muted-foreground">
                     {tHome("workspaceAssignHint")}
                   </p>
+                  {workspaceAssignError ? (
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-md border border-destructive/30 bg-destructive/5 p-3 text-left text-xs text-destructive">
+                      {workspaceAssignError}
+                    </pre>
+                  ) : null}
                   <form action={signOutAction} method="post">
                     <Button type="submit" variant="outline" size="sm">
                       {tCommon("signOut")}
