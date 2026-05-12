@@ -1,0 +1,21 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Deploy this service from the `timetracker` directory (or set rootDir below).
+
+services:
+  - type: web
+    name: timetracker
+    runtime: node
+    region: oregon
+    plan: starter
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20.18.0"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      # Set in the Render dashboard (do not commit secrets):
+      # NEXT_PUBLIC_SUPABASE_URL
+      # NEXT_PUBLIC_SUPABASE_ANON_KEY
+      # Optional: SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SITE_URL

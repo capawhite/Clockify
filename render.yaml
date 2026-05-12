@@ -1,0 +1,21 @@
+# Render.com blueprint — set env vars in the dashboard or link to a secret store.
+# Build/start paths assume the Next.js app lives in `timetracker/`.
+
+services:
+  - type: web
+    name: timetracker
+    rootDir: timetracker
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NEXTAUTH_SECRET
+        generateValue: true
