@@ -52,7 +52,8 @@
     "menuSubtitle": "Abre una sección de tu espacio de trabajo.",
     "signedInAs": "Sesión: {email}",
     "guestTitle": "Bienvenido",
-    "guestSubtitle": "Inicia sesión para registrar tiempo y ver informes."
+    "guestSubtitle": "Inicia sesión para registrar tiempo y ver informes.",
+    "workspaceAssignHint": "Si esto no desaparece, configure SUPABASE_SERVICE_ROLE_KEY en el servidor (Render → Environment) para que la app pueda vincular su cuenta, o pida a un administrador que le añada en Supabase."
   },
   "layout": {
     "noWorkspaceTitle": "Aún no hay espacio de trabajo",

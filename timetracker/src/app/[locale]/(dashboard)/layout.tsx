@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import { localizedRedirect } from "@/lib/i18n/server-redirect";
+import { getSignOutActionPath } from "@/lib/i18n/signout-action";
 import { DashboardNav } from "@/components/dashboard-nav";
 import {
   getWorkspaceContext,
@@ -15,6 +16,7 @@ export default async function DashboardLayout({
   const { user, profile } = await getWorkspaceContext();
   const t = await getTranslations("layout");
   const tCommon = await getTranslations("common");
+  const signOutAction = await getSignOutActionPath();
 
   if (!user) {
     await localizedRedirect("/login");
@@ -35,7 +37,7 @@ export default async function DashboardLayout({
           >
             {tCommon("home")}
           </Link>
-          <form action="/auth/signout" method="post">
+          <form action={signOutAction} method="post">
             <button
               type="submit"
               className="rounded bg-neutral-900 px-4 py-2 text-sm text-white dark:bg-neutral-100 dark:text-neutral-900"

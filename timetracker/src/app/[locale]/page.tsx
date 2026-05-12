@@ -10,7 +10,8 @@ import {
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getWorkspaceContext } from "@/lib/auth/workspace";
+import { getSignOutActionPath } from "@/lib/i18n/signout-action";
 import { BrandLogo } from "@/components/brand/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -19,22 +20,12 @@ import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 export default async function Home() {
-  const supabase = createClient();
   const tAuth = await getTranslations("auth");
   const tHome = await getTranslations("home");
   const tNav = await getTranslations("nav");
   const tCommon = await getTranslations("common");
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = user
-    ? await supabase
-        .from("profiles")
-        .select("workspace_id, role, full_name")
-        .eq("id", user.id)
-        .maybeSingle()
-    : { data: null };
+  const signOutAction = await getSignOutActionPath();
+  const { user, profile } = await getWorkspaceContext();
 
   const inWorkspace = Boolean(profile?.workspace_id);
   const isAdmin = profile?.role === "admin";
@@ -50,6 +41,13 @@ export default async function Home() {
             <BrandLogo variant="compact" withLink={false} />
           </Link>
           <div className="flex shrink-0 items-center gap-2">
+            {user ? (
+              <form action={signOutAction} method="post">
+                <Button type="submit" variant="ghost" size="sm">
+                  {tCommon("signOut")}
+                </Button>
+              </form>
+            ) : null}
             <LanguageSwitcher />
             <ThemeToggle />
           </div>
@@ -250,7 +248,7 @@ export default async function Home() {
                     </ul>
                   </div>
 
-                  <form action="/auth/signout" method="post" className="pt-2">
+                  <form action={signOutAction} method="post" className="pt-2">
                     <Button
                       type="submit"
                       variant="outline"
@@ -261,10 +259,18 @@ export default async function Home() {
                   </form>
                 </>
               ) : (
-                <div className="rounded-2xl border border-amber-500/25 bg-amber-500/5 px-5 py-4 text-center text-sm text-foreground dark:border-amber-400/20 dark:bg-amber-400/10">
+                <div className="space-y-4 rounded-2xl border border-amber-500/25 bg-amber-500/5 px-5 py-4 text-center text-sm text-foreground dark:border-amber-400/20 dark:bg-amber-400/10">
                   <p className="text-muted-foreground">
                     {tAuth("waitingWorkspace")}
                   </p>
+                  <p className="text-xs text-muted-foreground">
+                    {tHome("workspaceAssignHint")}
+                  </p>
+                  <form action={signOutAction} method="post">
+                    <Button type="submit" variant="outline" size="sm">
+                      {tCommon("signOut")}
+                    </Button>
+                  </form>
                 </div>
               )}
             </div>

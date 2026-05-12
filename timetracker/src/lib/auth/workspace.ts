@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ensureTestingWorkspaceAccess } from "@/lib/auth/ensure-testing-workspace";
 
 export type WorkspaceProfile = {
   workspace_id: string | null;
@@ -16,7 +17,7 @@ export async function getWorkspaceContext() {
     return { user: null as null, profile: null as null };
   }
 
-  const { data: profile, error } = await supabase
+  const { data: initialProfile, error } = await supabase
     .from("profiles")
     .select("workspace_id, role, full_name, is_active")
     .eq("id", user.id)
@@ -24,6 +25,21 @@ export async function getWorkspaceContext() {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  let profile = initialProfile;
+
+  if (!profile || !profile.workspace_id) {
+    await ensureTestingWorkspaceAccess(user.id);
+    const refetch = await supabase
+      .from("profiles")
+      .select("workspace_id, role, full_name, is_active")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (refetch.error) {
+      throw new Error(refetch.error.message);
+    }
+    profile = refetch.data;
   }
 
   return {

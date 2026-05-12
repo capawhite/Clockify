@@ -52,7 +52,8 @@
     "menuSubtitle": "Open a section of your workspace.",
     "signedInAs": "Signed in as {email}",
     "guestTitle": "Welcome",
-    "guestSubtitle": "Sign in to track time and view reports."
+    "guestSubtitle": "Sign in to track time and view reports.",
+    "workspaceAssignHint": "If this message stays, set SUPABASE_SERVICE_ROLE_KEY on the server (Render → Environment) so the app can attach your account, or ask an admin to add you in Supabase."
   },
   "layout": {
     "noWorkspaceTitle": "No workspace yet",
