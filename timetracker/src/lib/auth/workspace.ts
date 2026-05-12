@@ -1,6 +1,7 @@
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { ensureTestingWorkspaceAccess } from "@/lib/auth/ensure-testing-workspace";
+import { isServiceRoleWorkspaceBootstrapEnabled } from "@/lib/auth/workspace-bootstrap-env";
 
 export type WorkspaceProfile = {
   workspace_id: string | null;
@@ -38,7 +39,16 @@ export async function getWorkspaceContext(): Promise<WorkspaceContextResult> {
   let workspaceAssignError: string | null = null;
 
   if (!profile || !profile.workspace_id) {
-    const ensured = await ensureTestingWorkspaceAccess(user.id);
+    let ensured: Awaited<ReturnType<typeof ensureTestingWorkspaceAccess>>;
+    if (!isServiceRoleWorkspaceBootstrapEnabled()) {
+      ensured = {
+        ok: false,
+        error:
+          "Service-role workspace bootstrap is disabled (ENABLE_SERVICE_ROLE_WORKSPACE_BOOTSTRAP=false). Apply Supabase migrations in supabase/migrations (see supabase/TESTING_PHASE_CHECKLIST.md) or enable bootstrap.",
+      };
+    } else {
+      ensured = await ensureTestingWorkspaceAccess(user.id);
+    }
     if (!ensured.ok) {
       workspaceAssignError = ensured.error;
     }

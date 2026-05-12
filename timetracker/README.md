@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+**Supabase testing phase (everyone admin / workspace assignment):** see [`../supabase/TESTING_PHASE_CHECKLIST.md`](../supabase/TESTING_PHASE_CHECKLIST.md).
+
 ## Getting Started
 
 First, run the development server:
