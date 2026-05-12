@@ -47,7 +47,12 @@
     "projects": "Proyectos",
     "reports": "Informes",
     "admin": "Admin",
-    "team": "Equipo"
+    "team": "Equipo",
+    "menuTitle": "A dónde ir",
+    "menuSubtitle": "Abre una sección de tu espacio de trabajo.",
+    "signedInAs": "Sesión: {email}",
+    "guestTitle": "Bienvenido",
+    "guestSubtitle": "Inicia sesión para registrar tiempo y ver informes."
   },
   "layout": {
     "noWorkspaceTitle": "Aún no hay espacio de trabajo",

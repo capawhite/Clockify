@@ -47,7 +47,12 @@
     "projects": "Projects",
     "reports": "Reports",
     "admin": "Admin",
-    "team": "Team"
+    "team": "Team",
+    "menuTitle": "Where to next",
+    "menuSubtitle": "Open a section of your workspace.",
+    "signedInAs": "Signed in as {email}",
+    "guestTitle": "Welcome",
+    "guestSubtitle": "Sign in to track time and view reports."
   },
   "layout": {
     "noWorkspaceTitle": "No workspace yet",
