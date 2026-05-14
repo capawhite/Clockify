@@ -49,6 +49,21 @@ export async function createProject(formData: FormData) {
   }
 
   const supabase = createClient();
+
+  const { data: existingProjects } = await supabase
+    .from("projects")
+    .select("name")
+    .eq("workspace_id", profile.workspace_id);
+
+  const lowerNew = name.toLowerCase();
+  const dupProject = existingProjects?.some(
+    (r) => r.name.trim().toLowerCase() === lowerNew
+  );
+  if (dupProject) {
+    await errRedirect("PROJECT_DUPLICATE_NAME");
+    throw new Error("UNREACHABLE");
+  }
+
   if (client_id) {
     const { data: clientRow, error: clientErr } = await supabase
       .from("clients")
@@ -76,6 +91,10 @@ export async function createProject(formData: FormData) {
   });
 
   if (error) {
+    if ((error as { code?: string }).code === "23505") {
+      await errRedirect("PROJECT_DUPLICATE_NAME");
+      throw new Error("UNREACHABLE");
+    }
     await errRedirect("DB_ERROR", error.message);
     throw new Error("UNREACHABLE");
   }

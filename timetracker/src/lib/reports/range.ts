@@ -10,7 +10,9 @@ export type ReportTabParam =
   | "summary"
   | "by-project"
   | "by-user"
-  | "detailed";
+  | "detailed"
+  | "entries-by-client"
+  | "entries-by-project";
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -111,7 +113,14 @@ export function parseTab(
   raw: string | undefined,
   canSeeByUser: boolean
 ): ReportTabParam {
-  if (raw === "by-project" || raw === "detailed") return raw;
+  if (
+    raw === "by-project" ||
+    raw === "detailed" ||
+    raw === "entries-by-client" ||
+    raw === "entries-by-project"
+  ) {
+    return raw;
+  }
   if (raw === "by-user" && canSeeByUser) return "by-user";
   if (raw === "by-user") return "summary";
   if (raw === "summary") return "summary";

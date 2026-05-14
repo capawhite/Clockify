@@ -8,6 +8,16 @@ export type FetchReportEntriesResult = {
   truncated: boolean;
 };
 
+function normalizeEmbeddedProject(
+  raw: ReportEntryRow["projects"] | ReportEntryRow["projects"][] | undefined
+): ReportEntryRow["projects"] {
+  const row = Array.isArray(raw) ? raw[0] ?? null : raw ?? null;
+  if (!row) return null;
+  const c = row.clients;
+  const clients = Array.isArray(c) ? c[0] ?? null : c ?? null;
+  return { ...row, clients };
+}
+
 function normalizeRow(row: {
   id: string;
   user_id: string;
@@ -20,7 +30,7 @@ function normalizeRow(row: {
   projects: ReportEntryRow["projects"] | ReportEntryRow["projects"][];
 }): ReportEntryRow {
   const p = row.projects;
-  const projects = Array.isArray(p) ? p[0] ?? null : p;
+  const projects = normalizeEmbeddedProject(p);
   return { ...row, projects };
 }
 

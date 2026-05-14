@@ -33,8 +33,8 @@ type ProfileRow = {
 };
 
 const COMMON_CURRENCIES = [
-  "USD",
   "EUR",
+  "USD",
   "GBP",
   "CAD",
   "AUD",

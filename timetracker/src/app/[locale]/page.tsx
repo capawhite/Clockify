@@ -81,7 +81,7 @@ export default async function Home() {
           </div>
 
           {user ? (
-            <div className="mx-auto w-full max-w-xl space-y-6">
+            <div className="mx-auto w-full max-w-4xl space-y-6">
               <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
                 <p className="text-sm font-medium text-foreground">
                   {tHome("signedInAs", { email: user.email ?? "" })}
@@ -112,20 +112,20 @@ export default async function Home() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       {tHome("menuSubtitle")}
                     </p>
-                    <ul className="mt-5 grid list-none grid-cols-1 gap-3 sm:grid-cols-2">
+                    <ul className="mt-5 grid list-none grid-cols-2 gap-2 sm:grid-cols-4">
                       <li>
                         <Link
                           href="/dashboard"
                           className={cn(
-                            buttonVariants({ variant: "default", size: "lg" }),
-                            "h-auto w-full flex-col items-stretch gap-3 px-5 py-5 text-left font-semibold shadow-sm"
+                            buttonVariants({ variant: "default", size: "default" }),
+                            "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold shadow-sm sm:gap-3 sm:px-4 sm:text-base"
                           )}
                         >
                           <LayoutDashboard
-                            className="size-6 shrink-0 opacity-90"
+                            className="size-5 shrink-0 opacity-90"
                             aria-hidden
                           />
-                          <span className="text-base leading-tight">
+                          <span className="leading-tight">
                             {tNav("dashboard")}
                           </span>
                         </Link>
@@ -134,12 +134,12 @@ export default async function Home() {
                         <Link
                           href="/tracker"
                           className={cn(
-                            buttonVariants({ variant: "outline", size: "lg" }),
-                            "h-auto w-full flex-col items-stretch gap-3 border-border/80 bg-card px-5 py-5 text-left font-semibold hover:bg-muted/40"
+                            buttonVariants({ variant: "outline", size: "default" }),
+                            "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 border-border/80 bg-card px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/40 sm:gap-3 sm:px-4 sm:text-base"
                           )}
                         >
-                          <Clock className="size-6 shrink-0" aria-hidden />
-                          <span className="text-base leading-tight">
+                          <Clock className="size-5 shrink-0" aria-hidden />
+                          <span className="leading-tight">
                             {tNav("timer")}
                           </span>
                         </Link>
@@ -148,12 +148,12 @@ export default async function Home() {
                         <Link
                           href="/calendar"
                           className={cn(
-                            buttonVariants({ variant: "outline", size: "lg" }),
-                            "h-auto w-full flex-col items-stretch gap-3 border-border/80 bg-card px-5 py-5 text-left font-semibold hover:bg-muted/40"
+                            buttonVariants({ variant: "outline", size: "default" }),
+                            "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 border-border/80 bg-card px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/40 sm:gap-3 sm:px-4 sm:text-base"
                           )}
                         >
-                          <Calendar className="size-6 shrink-0" aria-hidden />
-                          <span className="text-base leading-tight">
+                          <Calendar className="size-5 shrink-0" aria-hidden />
+                          <span className="leading-tight">
                             {tNav("calendar")}
                           </span>
                         </Link>
@@ -162,12 +162,12 @@ export default async function Home() {
                         <Link
                           href="/clients"
                           className={cn(
-                            buttonVariants({ variant: "outline", size: "lg" }),
-                            "h-auto w-full flex-col items-stretch gap-3 border-border/80 bg-card px-5 py-5 text-left font-semibold hover:bg-muted/40"
+                            buttonVariants({ variant: "outline", size: "default" }),
+                            "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 border-border/80 bg-card px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/40 sm:gap-3 sm:px-4 sm:text-base"
                           )}
                         >
-                          <Users className="size-6 shrink-0" aria-hidden />
-                          <span className="text-base leading-tight">
+                          <Users className="size-5 shrink-0" aria-hidden />
+                          <span className="leading-tight">
                             {tNav("clients")}
                           </span>
                         </Link>
@@ -176,15 +176,15 @@ export default async function Home() {
                         <Link
                           href="/projects"
                           className={cn(
-                            buttonVariants({ variant: "outline", size: "lg" }),
-                            "h-auto w-full flex-col items-stretch gap-3 border-border/80 bg-card px-5 py-5 text-left font-semibold hover:bg-muted/40"
+                            buttonVariants({ variant: "outline", size: "default" }),
+                            "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 border-border/80 bg-card px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/40 sm:gap-3 sm:px-4 sm:text-base"
                           )}
                         >
                           <FolderKanban
-                            className="size-6 shrink-0"
+                            className="size-5 shrink-0"
                             aria-hidden
                           />
-                          <span className="text-base leading-tight">
+                          <span className="leading-tight">
                             {tNav("projects")}
                           </span>
                         </Link>
@@ -193,12 +193,12 @@ export default async function Home() {
                         <Link
                           href="/reports"
                           className={cn(
-                            buttonVariants({ variant: "outline", size: "lg" }),
-                            "h-auto w-full flex-col items-stretch gap-3 border-border/80 bg-card px-5 py-5 text-left font-semibold hover:bg-muted/40"
+                            buttonVariants({ variant: "outline", size: "default" }),
+                            "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 border-border/80 bg-card px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/40 sm:gap-3 sm:px-4 sm:text-base"
                           )}
                         >
-                          <BarChart3 className="size-6 shrink-0" aria-hidden />
-                          <span className="text-base leading-tight">
+                          <BarChart3 className="size-5 shrink-0" aria-hidden />
+                          <span className="leading-tight">
                             {tNav("reports")}
                           </span>
                         </Link>
@@ -211,16 +211,16 @@ export default async function Home() {
                               className={cn(
                                 buttonVariants({
                                   variant: "outline",
-                                  size: "lg",
+                                  size: "default",
                                 }),
-                                "h-auto w-full flex-col items-stretch gap-3 border-border/80 bg-card px-5 py-5 text-left font-semibold hover:bg-muted/40"
+                                "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 border-border/80 bg-card px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/40 sm:gap-3 sm:px-4 sm:text-base"
                               )}
                             >
                               <Shield
-                                className="size-6 shrink-0"
+                                className="size-5 shrink-0"
                                 aria-hidden
                               />
-                              <span className="text-base leading-tight">
+                              <span className="leading-tight">
                                 {tNav("admin")}
                               </span>
                             </Link>
@@ -231,16 +231,16 @@ export default async function Home() {
                               className={cn(
                                 buttonVariants({
                                   variant: "outline",
-                                  size: "lg",
+                                  size: "default",
                                 }),
-                                "h-auto w-full flex-col items-stretch gap-3 border-border/80 bg-card px-5 py-5 text-left font-semibold hover:bg-muted/40"
+                                "inline-flex h-auto min-h-11 w-full flex-row items-center gap-2 border-border/80 bg-card px-3 py-2.5 text-left text-sm font-semibold hover:bg-muted/40 sm:gap-3 sm:px-4 sm:text-base"
                               )}
                             >
                               <UsersRound
-                                className="size-6 shrink-0"
+                                className="size-5 shrink-0"
                                 aria-hidden
                               />
-                              <span className="text-base leading-tight">
+                              <span className="leading-tight">
                                 {tNav("team")}
                               </span>
                             </Link>

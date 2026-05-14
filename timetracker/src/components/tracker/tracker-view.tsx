@@ -27,16 +27,31 @@ import { cn } from "@/lib/utils";
 import { brand } from "@/lib/brand";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   utcIsoToWorkspaceDatetimeLocal,
+  utcIsoToWorkspaceDateAndTime,
   workspaceDateAndTimeToUtcIso,
   workspaceDatetimeLocalToUtcIso,
   workspaceNowDateAndTime,
 } from "@/lib/tracker/workspace-datetime";
+import {
+  filterProjectsByClientScope,
+  resolveBillableDefaultForProject,
+  uniqueClientsFromProjects,
+  type ClientScope,
+} from "@/lib/tracker/client-project-scope";
 import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
 
-export type TrackerProject = { id: string; name: string; color: string };
+export type TrackerProject = {
+  id: string;
+  name: string;
+  color: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_default_is_billable: boolean | null;
+  project_is_billable: boolean;
+};
 
 /** One slider step = this many minutes (end time = start + steps × this). */
 const MANUAL_DURATION_STEP_MINUTES = 10;
@@ -108,8 +123,13 @@ export function TrackerView({
   const [tick, setTick] = useState(0);
   const [mode, setMode] = useState<"timer" | "manual">("timer");
   const [description, setDescription] = useState("");
+  const [clientScope, setClientScope] = useState<ClientScope>("__all__");
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
-  const [billable, setBillable] = useState(true);
+  const [billable, setBillable] = useState(() =>
+    projects[0]
+      ? resolveBillableDefaultForProject(projects[0])
+      : true
+  );
   const [manualDate, setManualDate] = useState(() =>
     workspaceNowDateAndTime(workspaceTimezone).date
   );
@@ -120,6 +140,29 @@ export function TrackerView({
   const [manualDurationSteps, setManualDurationSteps] = useState(6);
   const [pending, setPending] = useState(false);
 
+  const clientsOptions = useMemo(
+    () => uniqueClientsFromProjects(projects),
+    [projects]
+  );
+  const hasUnassignedProjects = useMemo(
+    () => projects.some((p) => p.client_id == null),
+    [projects]
+  );
+  const filteredProjects = useMemo(
+    () => filterProjectsByClientScope(projects, clientScope),
+    [projects, clientScope]
+  );
+
+  useEffect(() => {
+    if (!filteredProjects.some((p) => p.id === projectId)) {
+      const next = filteredProjects[0];
+      setProjectId(next?.id ?? "");
+      if (next) {
+        setBillable(resolveBillableDefaultForProject(next));
+      }
+    }
+  }, [filteredProjects, projectId]);
+
   useEffect(() => {
     if (!runningEntry) {
       return;
@@ -127,12 +170,17 @@ export function TrackerView({
     setDescription(runningEntry.description ?? "");
     setProjectId(runningEntry.project_id);
     setBillable(runningEntry.is_billable);
+    const p = projects.find((x) => x.id === runningEntry.project_id);
+    if (p) {
+      setClientScope(p.client_id != null ? p.client_id : "__unassigned__");
+    }
   }, [
     runningEntry,
     runningEntry?.id,
     runningEntry?.description,
     runningEntry?.project_id,
     runningEntry?.is_billable,
+    projects,
   ]);
 
   const stateRef = useRef({
@@ -330,18 +378,6 @@ export function TrackerView({
     }
   }, [manualDate, manualTime, manualDurationSteps, workspaceTimezone, dfLocale]);
 
-  const zonedLabel = (iso: string) => {
-    try {
-      return format(
-        toZonedTime(new Date(iso), workspaceTimezone || "UTC"),
-        "MMM d, HH:mm",
-        { locale: dfLocale }
-      );
-    } catch {
-      return format(new Date(iso), "MMM d, HH:mm", { locale: dfLocale });
-    }
-  };
-
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -391,18 +427,50 @@ export function TrackerView({
             />
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor="tracker-client">{t("client")}</Label>
+            <select
+              id="tracker-client"
+              className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
+              value={clientScope}
+              onChange={(e) =>
+                setClientScope(e.target.value as ClientScope)
+              }
+              disabled={
+                !projects.length ||
+                (!!runningEntry && runningEntry.ended_at === null)
+              }
+            >
+              <option value="__all__">{t("allClients")}</option>
+              {hasUnassignedProjects ? (
+                <option value="__unassigned__">{t("noClient")}</option>
+              ) : null}
+              {clientsOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="tracker-project">{t("project")}</Label>
             <select
               id="tracker-project"
               className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
               value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              disabled={!projects.length}
+              onChange={(e) => {
+                const id = e.target.value;
+                setProjectId(id);
+                const p = projects.find((x) => x.id === id);
+                if (p) {
+                  setBillable(resolveBillableDefaultForProject(p));
+                }
+              }}
+              disabled={!filteredProjects.length}
             >
-              {!projects.length ? (
-                <option value="">{t("noProjects")}</option>
+              {!filteredProjects.length ? (
+                <option value="">{t("noProjectsForClient")}</option>
               ) : (
-                projects.map((p) => (
+                filteredProjects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
@@ -410,14 +478,17 @@ export function TrackerView({
               )}
             </select>
           </div>
-          <div className="flex items-center gap-2 pt-6">
-            <Switch
+          <div className="flex items-center gap-2 pt-1 sm:col-span-2">
+            <Checkbox
               id="tracker-billable"
               checked={billable}
-              onCheckedChange={(v) => setBillable(Boolean(v))}
+              onChange={(e) => setBillable(e.target.checked)}
             />
-            <Label htmlFor="tracker-billable" className="cursor-pointer select-none">
-              {billable ? t("billable") : t("notBillable")}
+            <Label
+              htmlFor="tracker-billable"
+              className="cursor-pointer select-none text-sm font-normal"
+            >
+              {t("billableCheckboxLabel")}
             </Label>
           </div>
         </div>
@@ -629,7 +700,6 @@ export function TrackerView({
                 entry={entry}
                 workspaceTimezone={workspaceTimezone}
                 projects={projects}
-                zonedLabel={zonedLabel}
                 onChanged={() => startTransition(() => router.refresh())}
               />
             ))}
@@ -644,13 +714,11 @@ function TrackerEntryRow({
   entry,
   workspaceTimezone,
   projects,
-  zonedLabel,
   onChanged,
 }: {
   entry: TrackerEntry;
   workspaceTimezone: string;
   projects: TrackerProject[];
-  zonedLabel: (iso: string) => string;
   onChanged: () => void;
 }) {
   const t = useTranslations("tracker");
@@ -684,6 +752,14 @@ function TrackerEntryRow({
       ? utcIsoToWorkspaceDatetimeLocal(entry.ended_at, workspaceTimezone)
       : ""
   );
+  const [inlineStartHm, setInlineStartHm] = useState(() =>
+    utcIsoToWorkspaceDateAndTime(entry.started_at, workspaceTimezone).time
+  );
+  const [inlineEndHm, setInlineEndHm] = useState(() =>
+    entry.ended_at
+      ? utcIsoToWorkspaceDateAndTime(entry.ended_at, workspaceTimezone).time
+      : ""
+  );
 
   useEffect(() => {
     if (!editing) {
@@ -696,6 +772,14 @@ function TrackerEntryRow({
       setEndLocal(
         entry.ended_at
           ? utcIsoToWorkspaceDatetimeLocal(entry.ended_at, workspaceTimezone)
+          : ""
+      );
+      setInlineStartHm(
+        utcIsoToWorkspaceDateAndTime(entry.started_at, workspaceTimezone).time
+      );
+      setInlineEndHm(
+        entry.ended_at
+          ? utcIsoToWorkspaceDateAndTime(entry.ended_at, workspaceTimezone).time
           : ""
       );
     }
@@ -731,6 +815,72 @@ function TrackerEntryRow({
     entry.started_at,
     entry.duration_seconds,
   ]);
+
+  async function saveQuickTimes() {
+    const origStart = utcIsoToWorkspaceDateAndTime(
+      entry.started_at,
+      workspaceTimezone
+    ).time;
+    const origEnd = entry.ended_at
+      ? utcIsoToWorkspaceDateAndTime(entry.ended_at, workspaceTimezone).time
+      : "";
+    if (
+      inlineStartHm === origStart &&
+      (entry.ended_at === null || inlineEndHm === origEnd)
+    ) {
+      return;
+    }
+    const startDate = utcIsoToWorkspaceDateAndTime(
+      entry.started_at,
+      workspaceTimezone
+    ).date;
+    const startedAt = workspaceDateAndTimeToUtcIso(
+      startDate,
+      inlineStartHm,
+      workspaceTimezone
+    );
+    if (!startedAt) {
+      toast.error(t("invalidStart"));
+      setInlineStartHm(origStart);
+      return;
+    }
+    let endedAtIso: string | null = null;
+    if (entry.ended_at === null) {
+      endedAtIso = null;
+    } else if (inlineEndHm.trim()) {
+      const endDate = utcIsoToWorkspaceDateAndTime(
+        entry.ended_at,
+        workspaceTimezone
+      ).date;
+      endedAtIso = workspaceDateAndTimeToUtcIso(
+        endDate,
+        inlineEndHm,
+        workspaceTimezone
+      );
+      if (!endedAtIso) {
+        toast.error(t("invalidEnd"));
+        setInlineEndHm(origEnd);
+        return;
+      }
+    } else {
+      toast.error(t("invalidEnd"));
+      setInlineEndHm(origEnd);
+      return;
+    }
+    setPending(true);
+    const res = await updateTimeEntry({
+      id: entry.id,
+      project_id: entry.project_id,
+      description: entry.description ?? "",
+      is_billable: entry.is_billable,
+      started_at: startedAt,
+      ended_at: endedAtIso,
+    });
+    setPending(false);
+    if (showActionResult(res, t("entrySaved"))) {
+      onChanged();
+    }
+  }
 
   async function saveEdit() {
     if (!entry.ended_at && !endLocal.trim()) {
@@ -799,7 +949,14 @@ function TrackerEntryRow({
             <select
               className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
               value={pid}
-              onChange={(e) => setPid(e.target.value)}
+              onChange={(e) => {
+                const id = e.target.value;
+                setPid(id);
+                const p = projects.find((x) => x.id === id);
+                if (p) {
+                  setBill(resolveBillableDefaultForProject(p));
+                }
+              }}
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -825,13 +982,16 @@ function TrackerEntryRow({
             />
           </div>
           <div className="flex items-center gap-2">
-            <Switch
+            <Checkbox
               id="entry-billable"
               checked={bill}
-              onCheckedChange={(v) => setBill(Boolean(v))}
+              onChange={(e) => setBill(e.target.checked)}
             />
-            <Label htmlFor="entry-billable" className="cursor-pointer select-none text-sm font-normal">
-              {bill ? t("billable") : t("notBillable")}
+            <Label
+              htmlFor="entry-billable"
+              className="cursor-pointer select-none text-sm font-normal"
+            >
+              {t("billableCheckboxLabel")}
             </Label>
           </div>
         </div>
@@ -881,10 +1041,31 @@ function TrackerEntryRow({
         >
           {entry.is_billable ? t("billableTag") : t("nonBillableTag")}
         </span>
-        <span className="text-muted-foreground">
-          {zonedLabel(entry.started_at)}
-          {entry.ended_at ? ` → ${zonedLabel(entry.ended_at)}` : null}
-        </span>
+        <div className="flex flex-wrap items-center gap-1 tabular-nums">
+          <Input
+            type="time"
+            className="h-7 w-[5.5rem] px-1 text-xs"
+            value={inlineStartHm}
+            disabled={pending}
+            aria-label={t("inlineStartAria")}
+            onChange={(e) => setInlineStartHm(e.target.value)}
+            onBlur={() => void saveQuickTimes()}
+          />
+          <span className="text-muted-foreground">→</span>
+          {entry.ended_at ? (
+            <Input
+              type="time"
+              className="h-7 w-[5.5rem] px-1 text-xs"
+              value={inlineEndHm}
+              disabled={pending}
+              aria-label={t("inlineEndAria")}
+              onChange={(e) => setInlineEndHm(e.target.value)}
+              onBlur={() => void saveQuickTimes()}
+            />
+          ) : (
+            <span className="text-muted-foreground px-1 text-xs">—</span>
+          )}
+        </div>
         <span className="font-mono text-xs tabular-nums">{durationLabel}</span>
         {entry.description ? (
           <span className="min-w-0 max-w-full truncate text-muted-foreground">

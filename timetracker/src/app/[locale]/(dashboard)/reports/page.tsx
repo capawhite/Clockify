@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import {
   aggregateByProject,
   aggregateByUser,
+  groupEntriesByClient,
+  groupEntriesByProject,
   summarizeEntries,
 } from "@/lib/reports/aggregate";
 import {
@@ -19,6 +21,7 @@ import {
 } from "@/lib/reports/range";
 import { fetchReportEntriesForRange } from "@/lib/reports/fetch-entries";
 import { ReportsView } from "@/components/reports/reports-view";
+import { getTranslations } from "next-intl/server";
 
 function firstString(v: string | string[] | undefined): string | undefined {
   if (typeof v === "string") return v;
@@ -38,6 +41,8 @@ export default async function ReportsPage({
   }
 
   const supabase = createClient();
+  const tReports = await getTranslations("reports");
+
   const { data: ws } = await supabase
     .from("workspaces")
     .select("timezone, week_starts_on, currency")
@@ -46,7 +51,7 @@ export default async function ReportsPage({
 
   const timeZone = ws?.timezone?.trim() || "UTC";
   const weekStartsOn = ws?.week_starts_on === "sun" ? "sun" : "mon";
-  const currency = ws?.currency?.trim() || "USD";
+  const currency = ws?.currency?.trim() || "EUR";
 
   const canFilterTeam = canViewWorkspaceReports(profile.role);
 
@@ -90,7 +95,14 @@ export default async function ReportsPage({
       ended_at,
       duration_seconds,
       is_billable,
-      projects ( id, name, color, hourly_rate )
+      projects (
+        id,
+        name,
+        color,
+        hourly_rate,
+        client_id,
+        clients ( id, name )
+      )
     `
         )
         .lt("started_at", rangeEndEx.toISOString())
@@ -141,6 +153,11 @@ export default async function ReportsPage({
   const byUser = canFilterTeam
     ? aggregateByUser(entries, new Map(Object.entries(nameByUserId)))
     : null;
+  const entryGroupsByClient = groupEntriesByClient(
+    entries,
+    tReports("unassignedClient")
+  );
+  const entryGroupsByProject = groupEntriesByProject(entries);
 
   return (
     <ReportsView
@@ -163,6 +180,8 @@ export default async function ReportsPage({
         byProject={byProject}
         byUser={byUser}
         detailedRows={entries}
+        entryGroupsByClient={entryGroupsByClient}
+        entryGroupsByProject={entryGroupsByProject}
         reportsTruncated={reportsTruncated}
     />
   );

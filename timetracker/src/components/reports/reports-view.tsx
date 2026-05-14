@@ -16,8 +16,13 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { ProjectAgg, SummaryStats, UserAgg } from "@/lib/reports/aggregate";
-import type { ReportEntryRow } from "@/lib/reports/aggregate";
+import type {
+  ProjectAgg,
+  ReportEntryGroup,
+  ReportEntryRow,
+  SummaryStats,
+  UserAgg,
+} from "@/lib/reports/aggregate";
 import {
   presetRangeYmd,
   type BillableFilterParam,
@@ -48,6 +53,8 @@ export type ReportsViewProps = {
   byProject: ProjectAgg[];
   byUser: UserAgg[] | null;
   detailedRows: ReportEntryRow[];
+  entryGroupsByClient: ReportEntryGroup[];
+  entryGroupsByProject: ReportEntryGroup[];
   reportsTruncated?: boolean;
 };
 
@@ -81,11 +88,19 @@ function buildQueryString(
 
 const tabIds: {
   id: ReportTabParam;
-  labelKey: "tabSummary" | "tabByProject" | "tabByUser" | "tabDetailed";
+  labelKey:
+    | "tabSummary"
+    | "tabByProject"
+    | "tabByUser"
+    | "tabDetailed"
+    | "tabEntriesByClient"
+    | "tabEntriesByProject";
   managerOnly?: boolean;
 }[] = [
   { id: "summary", labelKey: "tabSummary" },
   { id: "by-project", labelKey: "tabByProject" },
+  { id: "entries-by-project", labelKey: "tabEntriesByProject" },
+  { id: "entries-by-client", labelKey: "tabEntriesByClient" },
   { id: "by-user", labelKey: "tabByUser", managerOnly: true },
   { id: "detailed", labelKey: "tabDetailed" },
 ];
@@ -103,6 +118,8 @@ export function ReportsView({
   byProject,
   byUser,
   detailedRows,
+  entryGroupsByClient,
+  entryGroupsByProject,
   reportsTruncated = false,
 }: ReportsViewProps) {
   const router = useRouter();
@@ -406,6 +423,36 @@ export function ReportsView({
         ))}
       </div>
 
+      <section className="rounded-lg border border-border bg-muted/25 px-4 py-3 text-sm">
+        <p className="font-medium text-foreground">{tr("periodTotalsTitle")}</p>
+        <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-muted-foreground">
+          <span>
+            {tr("statTotalHours")}:{" "}
+            <strong className="tabular-nums text-foreground">
+              {formatHours(summary.totalSeconds)}
+            </strong>
+          </span>
+          <span>
+            {tr("statBillableHours")}:{" "}
+            <strong className="tabular-nums text-foreground">
+              {formatHours(summary.billableSeconds)}
+            </strong>
+          </span>
+          <span>
+            {tr("statNonBillableHours")}:{" "}
+            <strong className="tabular-nums text-foreground">
+              {formatHours(summary.nonBillableSeconds)}
+            </strong>
+          </span>
+          <span>
+            {tr("statBillableAmount")}:{" "}
+            <strong className="tabular-nums text-foreground">
+              {money.format(summary.billableAmount)}
+            </strong>
+          </span>
+        </div>
+      </section>
+
       {filters.tab === "summary" ? (
         <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -586,6 +633,168 @@ export function ReportsView({
                 </table>
               </div>
             </>
+          )}
+        </section>
+      ) : null}
+
+      {filters.tab === "entries-by-project" ? (
+        <section className="space-y-8">
+          {entryGroupsByProject.length === 0 ? (
+            <Empty message={tr("emptyNoCompleted")} />
+          ) : (
+            entryGroupsByProject.map((group) => (
+              <div key={group.key} className="space-y-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+                  <h3 className="text-base font-semibold">{group.label}</h3>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {tr("groupSubtotalHours", {
+                      hours: formatHours(group.seconds),
+                    })}
+                  </span>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full min-w-[720px] text-left text-sm">
+                    <thead className="border-b bg-muted/40">
+                      <tr>
+                        {canFilterTeam ? (
+                          <th className="p-3 font-medium">{tr("colUser")}</th>
+                        ) : null}
+                        <th className="p-3 font-medium">{tr("colProject")}</th>
+                        <th className="p-3 font-medium">{tr("colDescription")}</th>
+                        <th className="p-3 font-medium">{tr("colStart")}</th>
+                        <th className="p-3 font-medium">{tr("colEnd")}</th>
+                        <th className="p-3 font-medium">{tr("colDuration")}</th>
+                        <th className="p-3 font-medium">{tr("colBillable")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.entries.map((row) => (
+                        <tr key={row.id} className="border-b last:border-0">
+                          {canFilterTeam ? (
+                            <td className="max-w-[140px] truncate p-3">
+                              {nameByUserId[row.user_id] ?? row.user_id}
+                            </td>
+                          ) : null}
+                          <td className="max-w-[160px] truncate p-3">
+                            {row.projects?.name ?? "—"}
+                          </td>
+                          <td className="max-w-[220px] truncate p-3">
+                            {row.description || "—"}
+                          </td>
+                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
+                            {formatInTimeZone(
+                              row.started_at,
+                              workspaceTimezone,
+                              "yyyy-MM-dd HH:mm",
+                              { locale: dateFnsLocale }
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
+                            {row.ended_at
+                              ? formatInTimeZone(
+                                  row.ended_at,
+                                  workspaceTimezone,
+                                  "yyyy-MM-dd HH:mm",
+                                  { locale: dateFnsLocale }
+                                )
+                              : "—"}
+                          </td>
+                          <td className="p-3 tabular-nums">
+                            {formatHms(row.duration_seconds)}
+                          </td>
+                          <td className="p-3">
+                            {row.is_billable
+                              ? tr("billableYes")
+                              : tr("billableNo")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))
+          )}
+        </section>
+      ) : null}
+
+      {filters.tab === "entries-by-client" ? (
+        <section className="space-y-8">
+          {entryGroupsByClient.length === 0 ? (
+            <Empty message={tr("emptyNoCompleted")} />
+          ) : (
+            entryGroupsByClient.map((group) => (
+              <div key={group.key} className="space-y-2">
+                <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-2">
+                  <h3 className="text-base font-semibold">{group.label}</h3>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {tr("groupSubtotalHours", {
+                      hours: formatHours(group.seconds),
+                    })}
+                  </span>
+                </div>
+                <div className="overflow-x-auto rounded-lg border border-border">
+                  <table className="w-full min-w-[720px] text-left text-sm">
+                    <thead className="border-b bg-muted/40">
+                      <tr>
+                        {canFilterTeam ? (
+                          <th className="p-3 font-medium">{tr("colUser")}</th>
+                        ) : null}
+                        <th className="p-3 font-medium">{tr("colProject")}</th>
+                        <th className="p-3 font-medium">{tr("colDescription")}</th>
+                        <th className="p-3 font-medium">{tr("colStart")}</th>
+                        <th className="p-3 font-medium">{tr("colEnd")}</th>
+                        <th className="p-3 font-medium">{tr("colDuration")}</th>
+                        <th className="p-3 font-medium">{tr("colBillable")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.entries.map((row) => (
+                        <tr key={row.id} className="border-b last:border-0">
+                          {canFilterTeam ? (
+                            <td className="max-w-[140px] truncate p-3">
+                              {nameByUserId[row.user_id] ?? row.user_id}
+                            </td>
+                          ) : null}
+                          <td className="max-w-[160px] truncate p-3">
+                            {row.projects?.name ?? "—"}
+                          </td>
+                          <td className="max-w-[220px] truncate p-3">
+                            {row.description || "—"}
+                          </td>
+                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
+                            {formatInTimeZone(
+                              row.started_at,
+                              workspaceTimezone,
+                              "yyyy-MM-dd HH:mm",
+                              { locale: dateFnsLocale }
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
+                            {row.ended_at
+                              ? formatInTimeZone(
+                                  row.ended_at,
+                                  workspaceTimezone,
+                                  "yyyy-MM-dd HH:mm",
+                                  { locale: dateFnsLocale }
+                                )
+                              : "—"}
+                          </td>
+                          <td className="p-3 tabular-nums">
+                            {formatHms(row.duration_seconds)}
+                          </td>
+                          <td className="p-3">
+                            {row.is_billable
+                              ? tr("billableYes")
+                              : tr("billableNo")}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))
           )}
         </section>
       ) : null}

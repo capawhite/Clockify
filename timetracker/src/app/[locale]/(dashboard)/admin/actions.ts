@@ -228,7 +228,7 @@ export async function updateWorkspaceSettings(formData: FormData) {
   const name = formData.get("name")?.toString().trim();
   const timezone = formData.get("timezone")?.toString().trim() || "UTC";
   const week_starts_on = formData.get("week_starts_on")?.toString();
-  const currency = formData.get("currency")?.toString().trim().toUpperCase() || "USD";
+  const currency = formData.get("currency")?.toString().trim().toUpperCase() || "EUR";
 
   if (!name) {
     await adminErrRedirect("WORKSPACE_NAME_REQUIRED");

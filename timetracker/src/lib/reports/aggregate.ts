@@ -1,8 +1,15 @@
+export type ReportClientEmbed = {
+  id: string;
+  name: string;
+} | null;
+
 export type ReportProjectEmbed = {
   id: string;
   name: string;
   color: string | null;
   hourly_rate: string | number | null;
+  client_id: string | null;
+  clients: ReportClientEmbed;
 };
 
 export type ReportEntryRow = {
@@ -17,17 +24,18 @@ export type ReportEntryRow = {
   projects: ReportProjectEmbed | null;
 };
 
-function rateToNumber(rate: string | number | null | undefined): number {
-  if (rate == null || rate === "") return 0;
-  const n = typeof rate === "number" ? rate : Number(rate);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function entrySeconds(e: ReportEntryRow): number {
+/** Seconds counted for reports (completed segments only). */
+export function entrySeconds(e: ReportEntryRow): number {
   if (e.duration_seconds != null && Number.isFinite(e.duration_seconds)) {
     return Math.max(0, e.duration_seconds);
   }
   return 0;
+}
+
+function rateToNumber(rate: string | number | null | undefined): number {
+  if (rate == null || rate === "") return 0;
+  const n = typeof rate === "number" ? rate : Number(rate);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function entryAmountUsd(e: ReportEntryRow): number {
@@ -124,6 +132,73 @@ export function aggregateByUser(
     map.set(id, cur);
   }
   return Array.from(map.values()).sort((a, b) => b.seconds - a.seconds);
+}
+
+export type ReportEntryGroup = {
+  key: string;
+  label: string;
+  seconds: number;
+  entries: ReportEntryRow[];
+};
+
+export function groupEntriesByClient(
+  rows: ReportEntryRow[],
+  unassignedLabel: string
+): ReportEntryGroup[] {
+  const map = new Map<string, { label: string; entries: ReportEntryRow[] }>();
+  for (const e of rows) {
+    const s = entrySeconds(e);
+    if (s === 0) continue;
+    const client = e.projects?.clients;
+    const key = client?.id ?? "__none__";
+    const label = client?.name ?? unassignedLabel;
+    const cur = map.get(key) ?? { label, entries: [] };
+    cur.entries.push(e);
+    map.set(key, cur);
+  }
+  const groups: ReportEntryGroup[] = [];
+  map.forEach((v, key) => {
+    let seconds = 0;
+    for (const x of v.entries) {
+      seconds += entrySeconds(x);
+    }
+    v.entries.sort(
+      (a, b) =>
+        new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+    );
+    groups.push({ key, label: v.label, seconds, entries: v.entries });
+  });
+  return groups.sort((a, b) => {
+    if (a.key === "__none__") return 1;
+    if (b.key === "__none__") return -1;
+    return a.label.localeCompare(b.label);
+  });
+}
+
+export function groupEntriesByProject(rows: ReportEntryRow[]): ReportEntryGroup[] {
+  const map = new Map<string, { label: string; entries: ReportEntryRow[] }>();
+  for (const e of rows) {
+    const s = entrySeconds(e);
+    if (s === 0) continue;
+    const key = e.project_id;
+    const label = e.projects?.name ?? "Unknown project";
+    const cur = map.get(key) ?? { label, entries: [] };
+    cur.entries.push(e);
+    map.set(key, cur);
+  }
+  const groups: ReportEntryGroup[] = [];
+  map.forEach((v, key) => {
+    let seconds = 0;
+    for (const x of v.entries) {
+      seconds += entrySeconds(x);
+    }
+    v.entries.sort(
+      (a, b) =>
+        new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+    );
+    groups.push({ key, label: v.label, seconds, entries: v.entries });
+  });
+  return groups.sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export function secondsToHours(seconds: number): number {

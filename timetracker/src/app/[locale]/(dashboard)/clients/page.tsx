@@ -77,6 +77,10 @@ export default async function ClientsPage({
               className="h-9 w-16 cursor-pointer rounded border border-neutral-300 bg-white dark:border-neutral-600"
             />
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input name="default_is_billable" type="checkbox" defaultChecked />
+            {t("billableByDefault")}
+          </label>
           <button
             type="submit"
             className="w-fit rounded bg-neutral-900 px-3 py-1.5 text-sm text-white dark:bg-neutral-100 dark:text-neutral-900"

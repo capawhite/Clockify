@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm({
@@ -9,7 +8,6 @@ export function LoginForm({
 }: {
   initialError?: string | null;
 }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(initialError ?? null);
@@ -24,13 +22,13 @@ export function LoginForm({
       email,
       password,
     });
-    setLoading(false);
     if (signInError) {
+      setLoading(false);
       setError(signInError.message);
       return;
     }
-    router.refresh();
-    router.push("/");
+    /* Full navigation so middleware + RSC see the new auth cookies (router alone can race). */
+    window.location.assign("/");
   }
 
   async function signUp() {
@@ -41,13 +39,12 @@ export function LoginForm({
       email,
       password,
     });
-    setLoading(false);
     if (signUpError) {
+      setLoading(false);
       setError(signUpError.message);
       return;
     }
-    router.refresh();
-    router.push("/");
+    window.location.assign("/");
   }
 
   return (

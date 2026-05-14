@@ -36,19 +36,41 @@ export async function createWorkspaceClient(formData: FormData) {
 
   const name = formData.get("name")?.toString().trim();
   const color = formData.get("color")?.toString().trim() || "#6366f1";
+  const default_is_billable =
+    formData.get("default_is_billable") === "on";
   if (!name) {
     await errRedirect("/clients", "CLIENT_NAME_REQUIRED");
     throw new Error("UNREACHABLE");
   }
 
   const supabase = createClient();
+
+  const { data: existingClients } = await supabase
+    .from("clients")
+    .select("name")
+    .eq("workspace_id", profile.workspace_id);
+
+  const lowerNew = name.toLowerCase();
+  const dupClient = existingClients?.some(
+    (r) => r.name.trim().toLowerCase() === lowerNew
+  );
+  if (dupClient) {
+    await errRedirect("/clients", "CLIENT_DUPLICATE_NAME");
+    throw new Error("UNREACHABLE");
+  }
+
   const { error } = await supabase.from("clients").insert({
     workspace_id: profile.workspace_id,
     name,
     color,
+    default_is_billable,
   });
 
   if (error) {
+    if ((error as { code?: string }).code === "23505") {
+      await errRedirect("/clients", "CLIENT_DUPLICATE_NAME");
+      throw new Error("UNREACHABLE");
+    }
     await errRedirect("/clients", "DB_ERROR", error.message);
     throw new Error("UNREACHABLE");
   }

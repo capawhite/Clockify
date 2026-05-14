@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { formatInTimeZone } from "date-fns-tz";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { workspaceDateAndTimeToUtcIso } from "@/lib/tracker/workspace-datetime";
+import {
+  filterProjectsByClientScope,
+  resolveBillableDefaultForProject,
+  uniqueClientsFromProjects,
+  type ClientScope,
+} from "@/lib/tracker/client-project-scope";
 import type { CalendarEntry, PopoverState } from "./types";
 import type { TrackerProject } from "@/components/tracker/tracker-view";
 
@@ -56,6 +62,16 @@ function initFromEntry(
   };
 }
 
+function initialClientScope(
+  projects: TrackerProject[],
+  popover: PopoverState
+): ClientScope {
+  if (popover.mode === "create") return "__all__";
+  const ep = projects.find((p) => p.id === popover.entry.project_id);
+  if (!ep) return "__all__";
+  return ep.client_id != null ? ep.client_id : "__unassigned__";
+}
+
 export function EntryFormPopover({
   popover,
   projects,
@@ -88,10 +104,42 @@ export function EntryFormPopover({
     );
   });
   const [description, setDescription] = useState(entry?.description ?? "");
+  const [clientScope, setClientScope] = useState<ClientScope>(() =>
+    initialClientScope(projects, popover)
+  );
   const [projectId, setProjectId] = useState(
     entry?.project_id ?? projects[0]?.id ?? ""
   );
-  const [billable, setBillable] = useState(entry?.is_billable ?? true);
+  const [billable, setBillable] = useState(() =>
+    isEdit && entry
+      ? entry.is_billable
+      : projects[0]
+        ? resolveBillableDefaultForProject(projects[0])
+        : true
+  );
+
+  const clientsOptions = useMemo(
+    () => uniqueClientsFromProjects(projects),
+    [projects]
+  );
+  const hasUnassignedProjects = useMemo(
+    () => projects.some((p) => p.client_id == null),
+    [projects]
+  );
+  const filteredProjects = useMemo(
+    () => filterProjectsByClientScope(projects, clientScope),
+    [projects, clientScope]
+  );
+
+  useEffect(() => {
+    if (!filteredProjects.some((p) => p.id === projectId)) {
+      const next = filteredProjects[0];
+      setProjectId(next?.id ?? "");
+      if (next) {
+        setBillable(resolveBillableDefaultForProject(next));
+      }
+    }
+  }, [filteredProjects, projectId]);
 
   async function handleSave() {
     if (!projectId) return;
@@ -197,31 +245,69 @@ export function EntryFormPopover({
           />
         </div>
 
-        {/* Project */}
-        <div className="space-y-1">
-          <Label className="text-xs">{t("project")}</Label>
-          <select
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
-          >
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+        {/* Client + project */}
+        <div className="grid gap-2">
+          <div className="space-y-1">
+            <Label className="text-xs">{t("client")}</Label>
+            <select
+              value={clientScope}
+              onChange={(e) =>
+                setClientScope(e.target.value as ClientScope)
+              }
+              disabled={!projects.length}
+              className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              <option value="__all__">{t("allClients")}</option>
+              {hasUnassignedProjects ? (
+                <option value="__unassigned__">{t("noClient")}</option>
+              ) : null}
+              {clientsOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">{t("project")}</Label>
+            <select
+              value={projectId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setProjectId(id);
+                const p = projects.find((x) => x.id === id);
+                if (p) {
+                  setBillable(resolveBillableDefaultForProject(p));
+                }
+              }}
+              disabled={!filteredProjects.length}
+              className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+            >
+              {!filteredProjects.length ? (
+                <option value="">{t("noProjectsForClient")}</option>
+              ) : (
+                filteredProjects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
         </div>
 
         {/* Billable */}
         <div className="flex items-center gap-2">
-          <Switch
+          <Checkbox
             id="cal-billable"
             checked={billable}
-            onCheckedChange={(v) => setBillable(Boolean(v))}
+            onChange={(e) => setBillable(e.target.checked)}
           />
-          <Label htmlFor="cal-billable" className="text-sm cursor-pointer select-none">
-            {billable ? t("billable") : t("notBillable")}
+          <Label
+            htmlFor="cal-billable"
+            className="text-sm cursor-pointer select-none"
+          >
+            {t("billableCheckboxLabel")}
           </Label>
         </div>
 

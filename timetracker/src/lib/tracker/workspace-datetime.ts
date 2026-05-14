@@ -26,6 +26,18 @@ export function workspaceDateAndTimeToUtcIso(
   return workspaceDatetimeLocalToUtcIso(`${d}T${withSecs}`, timeZone);
 }
 
+/** Workspace wall-clock date (yyyy-MM-dd) + time (HH:mm) for an instant. */
+export function utcIsoToWorkspaceDateAndTime(
+  iso: string,
+  timeZone: string
+): { date: string; time: string } {
+  const tz = timeZone?.trim() || "UTC";
+  return {
+    date: formatInTimeZone(new Date(iso), tz, "yyyy-MM-dd"),
+    time: formatInTimeZone(new Date(iso), tz, "HH:mm"),
+  };
+}
+
 /** Format an instant for `<input type="datetime-local">` in a workspace IANA zone. */
 export function utcIsoToWorkspaceDatetimeLocal(
   iso: string,
