@@ -255,7 +255,8 @@ export async function updateTimeEntry(input: {
     return projOk;
   }
 
-  const { error } = await supabase
+  const isAdmin = profile.role === "admin";
+  let updateQuery = supabase
     .from("time_entries")
     .update({
       project_id: input.project_id,
@@ -264,8 +265,13 @@ export async function updateTimeEntry(input: {
       started_at: start.toISOString(),
       ended_at: end ? end.toISOString() : null,
     })
-    .eq("id", input.id)
-    .eq("user_id", user.id);
+    .eq("id", input.id);
+
+  if (!isAdmin) {
+    updateQuery = updateQuery.eq("user_id", user.id);
+  }
+
+  const { error } = await updateQuery;
 
   if (error) {
     return actionFail("DB_ERROR", { detail: error.message });

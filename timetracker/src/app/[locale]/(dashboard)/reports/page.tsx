@@ -165,6 +165,8 @@ export default async function ReportsPage({
         weekStartsOn={weekStartsOn}
         currency={currency}
         canFilterTeam={canFilterTeam}
+        currentUserId={user.id}
+        canEditAnyEntry={profile.role === "admin"}
         filters={{
           from,
           to,

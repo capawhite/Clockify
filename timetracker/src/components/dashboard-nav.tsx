@@ -17,7 +17,7 @@ export async function DashboardNav({
     <header className="border-b bg-background">
       <nav className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-2 px-6 py-3 text-sm font-medium">
         <div className="mr-auto flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-          <BrandLogo variant="compact" className="mr-1" />
+          <BrandLogo variant="compact" className="mr-1" href="/dashboard" />
           <Link href="/" className="text-muted-foreground">
             {t("home")}
           </Link>

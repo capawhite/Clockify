@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useTransition } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { formatInTimeZone } from "date-fns-tz";
 import {
   Bar,
   BarChart,
@@ -29,15 +28,17 @@ import {
   type ReportTabParam,
 } from "@/lib/reports/range";
 import { brand } from "@/lib/brand";
-import { getDateFnsLocale } from "@/lib/i18n/date-fns-locale";
 import { REPORTS_FETCH_MAX_ROWS } from "@/lib/reports/fetch-entries";
 import { toast } from "sonner";
+import { ReportEntryTableRows } from "@/components/reports/report-entry-table-rows";
 
 export type ReportsViewProps = {
   workspaceTimezone: string;
   weekStartsOn: "mon" | "sun";
   currency: string;
   canFilterTeam: boolean;
+  currentUserId: string;
+  canEditAnyEntry: boolean;
   filters: {
     from: string;
     to: string;
@@ -60,15 +61,6 @@ export type ReportsViewProps = {
 
 function formatHours(seconds: number, digits = 2): string {
   return (seconds / 3600).toFixed(digits);
-}
-
-function formatHms(seconds: number | null): string {
-  if (seconds == null || !Number.isFinite(seconds)) return "—";
-  const s = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const r = s % 60;
-  return `${h}:${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
 
 function csvEscape(v: string): string {
@@ -110,6 +102,8 @@ export function ReportsView({
   weekStartsOn,
   currency,
   canFilterTeam,
+  currentUserId,
+  canEditAnyEntry,
   filters,
   members,
   projects,
@@ -127,8 +121,6 @@ export function ReportsView({
   const locale = useLocale();
   const tr = useTranslations("reports");
   const [, startNav] = useTransition();
-
-  const dateFnsLocale = useMemo(() => getDateFnsLocale(locale), [locale]);
 
   const money = useMemo(
     () =>
@@ -668,47 +660,16 @@ export function ReportsView({
                       </tr>
                     </thead>
                     <tbody>
-                      {group.entries.map((row) => (
-                        <tr key={row.id} className="border-b last:border-0">
-                          {canFilterTeam ? (
-                            <td className="max-w-[140px] truncate p-3">
-                              {nameByUserId[row.user_id] ?? row.user_id}
-                            </td>
-                          ) : null}
-                          <td className="max-w-[160px] truncate p-3">
-                            {row.projects?.name ?? "—"}
-                          </td>
-                          <td className="max-w-[220px] truncate p-3">
-                            {row.description || "—"}
-                          </td>
-                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
-                            {formatInTimeZone(
-                              row.started_at,
-                              workspaceTimezone,
-                              "yyyy-MM-dd HH:mm",
-                              { locale: dateFnsLocale }
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
-                            {row.ended_at
-                              ? formatInTimeZone(
-                                  row.ended_at,
-                                  workspaceTimezone,
-                                  "yyyy-MM-dd HH:mm",
-                                  { locale: dateFnsLocale }
-                                )
-                              : "—"}
-                          </td>
-                          <td className="p-3 tabular-nums">
-                            {formatHms(row.duration_seconds)}
-                          </td>
-                          <td className="p-3">
-                            {row.is_billable
-                              ? tr("billableYes")
-                              : tr("billableNo")}
-                          </td>
-                        </tr>
-                      ))}
+                      <ReportEntryTableRows
+                        rows={group.entries}
+                        canFilterTeam={canFilterTeam}
+                        canEditAnyEntry={canEditAnyEntry}
+                        currentUserId={currentUserId}
+                        workspaceTimezone={workspaceTimezone}
+                        nameByUserId={nameByUserId}
+                        billableYes={tr("billableYes")}
+                        billableNo={tr("billableNo")}
+                      />
                     </tbody>
                   </table>
                 </div>
@@ -749,47 +710,16 @@ export function ReportsView({
                       </tr>
                     </thead>
                     <tbody>
-                      {group.entries.map((row) => (
-                        <tr key={row.id} className="border-b last:border-0">
-                          {canFilterTeam ? (
-                            <td className="max-w-[140px] truncate p-3">
-                              {nameByUserId[row.user_id] ?? row.user_id}
-                            </td>
-                          ) : null}
-                          <td className="max-w-[160px] truncate p-3">
-                            {row.projects?.name ?? "—"}
-                          </td>
-                          <td className="max-w-[220px] truncate p-3">
-                            {row.description || "—"}
-                          </td>
-                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
-                            {formatInTimeZone(
-                              row.started_at,
-                              workspaceTimezone,
-                              "yyyy-MM-dd HH:mm",
-                              { locale: dateFnsLocale }
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
-                            {row.ended_at
-                              ? formatInTimeZone(
-                                  row.ended_at,
-                                  workspaceTimezone,
-                                  "yyyy-MM-dd HH:mm",
-                                  { locale: dateFnsLocale }
-                                )
-                              : "—"}
-                          </td>
-                          <td className="p-3 tabular-nums">
-                            {formatHms(row.duration_seconds)}
-                          </td>
-                          <td className="p-3">
-                            {row.is_billable
-                              ? tr("billableYes")
-                              : tr("billableNo")}
-                          </td>
-                        </tr>
-                      ))}
+                      <ReportEntryTableRows
+                        rows={group.entries}
+                        canFilterTeam={canFilterTeam}
+                        canEditAnyEntry={canEditAnyEntry}
+                        currentUserId={currentUserId}
+                        workspaceTimezone={workspaceTimezone}
+                        nameByUserId={nameByUserId}
+                        billableYes={tr("billableYes")}
+                        billableNo={tr("billableNo")}
+                      />
                     </tbody>
                   </table>
                 </div>
@@ -835,47 +765,16 @@ export function ReportsView({
                     </td>
                   </tr>
                 ) : (
-                  detailedRows.map((row) => (
-                    <tr key={row.id} className="border-b last:border-0">
-                      {canFilterTeam ? (
-                        <td className="max-w-[140px] truncate p-3">
-                          {nameByUserId[row.user_id] ?? row.user_id}
-                        </td>
-                      ) : null}
-                      <td className="max-w-[160px] truncate p-3">
-                        {row.projects?.name ?? "—"}
-                      </td>
-                      <td className="max-w-[220px] truncate p-3">
-                        {row.description || "—"}
-                      </td>
-                      <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
-                        {formatInTimeZone(
-                          row.started_at,
-                          workspaceTimezone,
-                          "yyyy-MM-dd HH:mm",
-                          { locale: dateFnsLocale }
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap p-3 tabular-nums text-muted-foreground">
-                        {row.ended_at
-                          ? formatInTimeZone(
-                              row.ended_at,
-                              workspaceTimezone,
-                              "yyyy-MM-dd HH:mm",
-                              { locale: dateFnsLocale }
-                            )
-                          : "—"}
-                      </td>
-                      <td className="p-3 tabular-nums">
-                        {formatHms(row.duration_seconds)}
-                      </td>
-                      <td className="p-3">
-                        {row.is_billable
-                          ? tr("billableYes")
-                          : tr("billableNo")}
-                      </td>
-                    </tr>
-                  ))
+                  <ReportEntryTableRows
+                    rows={detailedRows}
+                    canFilterTeam={canFilterTeam}
+                    canEditAnyEntry={canEditAnyEntry}
+                    currentUserId={currentUserId}
+                    workspaceTimezone={workspaceTimezone}
+                    nameByUserId={nameByUserId}
+                    billableYes={tr("billableYes")}
+                    billableNo={tr("billableNo")}
+                  />
                 )}
               </tbody>
             </table>

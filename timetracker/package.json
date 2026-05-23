@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "import:clockify": "node scripts/import-clockify-ytd.mjs --fresh --timezone=Europe/Madrid --set-workspace-timezone",
+    "import:clockify:dry-run": "node scripts/import-clockify-ytd.mjs --dry-run",
+    "import:clockify:fresh": "node scripts/import-clockify-ytd.mjs --fresh"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",

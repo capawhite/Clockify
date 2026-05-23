@@ -242,7 +242,12 @@
     "noEntriesFilters": "No entries match these filters.",
     "emptyNoCompleted": "No completed time entries in this range. Running timers are not included until stopped.",
     "billableYes": "Yes",
-    "billableNo": "No"
+    "billableNo": "No",
+    "editStartHint": "Click to edit start",
+    "editEndHint": "Click to edit end",
+    "editStartAria": "Edit start date and time",
+    "editEndAria": "Edit end date and time",
+    "durationTooLong": "Duration cannot exceed 24 hours. Adjust start or end."
   },
   "dashboard": {
     "title": "Dashboard",

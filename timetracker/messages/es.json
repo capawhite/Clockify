@@ -242,7 +242,12 @@
     "noEntriesFilters": "Ninguna entrada coincide con estos filtros.",
     "emptyNoCompleted": "No hay entradas de tiempo completadas en este rango. Los cronómetros en marcha no se incluyen hasta detenerlos.",
     "billableYes": "Sí",
-    "billableNo": "No"
+    "billableNo": "No",
+    "editStartHint": "Clic para editar inicio",
+    "editEndHint": "Clic para editar fin",
+    "editStartAria": "Editar fecha y hora de inicio",
+    "editEndAria": "Editar fecha y hora de fin",
+    "durationTooLong": "La duración no puede superar 24 horas. Ajuste inicio o fin."
   },
   "dashboard": {
     "title": "Panel",
