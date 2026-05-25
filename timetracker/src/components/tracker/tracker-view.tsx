@@ -89,6 +89,7 @@ type TrackerViewProps = {
   userId: string;
   workspaceTimezone: string;
   projects: TrackerProject[];
+  projectsLoadError?: string | null;
   runningEntry: TrackerEntry | null;
   entries: TrackerEntry[];
 };
@@ -97,6 +98,7 @@ export function TrackerView({
   userId,
   workspaceTimezone,
   projects,
+  projectsLoadError,
   runningEntry,
   entries,
 }: TrackerViewProps) {
@@ -124,12 +126,8 @@ export function TrackerView({
   const [mode, setMode] = useState<"timer" | "manual">("timer");
   const [description, setDescription] = useState("");
   const [clientScope, setClientScope] = useState<ClientScope>("__all__");
-  const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
-  const [billable, setBillable] = useState(() =>
-    projects[0]
-      ? resolveBillableDefaultForProject(projects[0])
-      : true
-  );
+  const [projectId, setProjectId] = useState("");
+  const [billable, setBillable] = useState(true);
   const [manualDate, setManualDate] = useState(() =>
     workspaceNowDateAndTime(workspaceTimezone).date
   );
@@ -153,14 +151,14 @@ export function TrackerView({
     [projects, clientScope]
   );
 
-  useEffect(() => {
-    if (!filteredProjects.some((p) => p.id === projectId)) {
-      const next = filteredProjects[0];
-      setProjectId(next?.id ?? "");
-      if (next) {
-        setBillable(resolveBillableDefaultForProject(next));
-      }
+  const effectiveProjectId = useMemo(() => {
+    if (
+      projectId &&
+      filteredProjects.some((p) => p.id === projectId)
+    ) {
+      return projectId;
     }
+    return filteredProjects[0]?.id ?? "";
   }, [filteredProjects, projectId]);
 
   useEffect(() => {
@@ -185,7 +183,7 @@ export function TrackerView({
 
   const stateRef = useRef({
     mode,
-    projectId,
+    projectId: effectiveProjectId,
     runningEntry,
     description,
     billable,
@@ -195,7 +193,7 @@ export function TrackerView({
   });
   stateRef.current = {
     mode,
-    projectId,
+    projectId: effectiveProjectId,
     runningEntry,
     description,
     billable,
@@ -389,6 +387,24 @@ export function TrackerView({
         </p>
       </div>
 
+      {projectsLoadError ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-950 dark:text-red-100"
+        >
+          {t("projectsLoadError", { detail: projectsLoadError })}
+        </p>
+      ) : null}
+
+      {!projects.length && !projectsLoadError ? (
+        <p className="text-sm text-muted-foreground">
+          {t("noProjectsHint")}{" "}
+          <Link href="/projects" className="font-medium underline">
+            {t("noProjectsLink")}
+          </Link>
+        </p>
+      ) : null}
+
       <div className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
@@ -456,7 +472,7 @@ export function TrackerView({
             <select
               id="tracker-project"
               className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2 text-sm"
-              value={projectId}
+              value={effectiveProjectId}
               onChange={(e) => {
                 const id = e.target.value;
                 setProjectId(id);
@@ -465,7 +481,10 @@ export function TrackerView({
                   setBillable(resolveBillableDefaultForProject(p));
                 }
               }}
-              disabled={!filteredProjects.length}
+              disabled={
+                !filteredProjects.length ||
+                (!!runningEntry && runningEntry.ended_at === null)
+              }
             >
               {!filteredProjects.length ? (
                 <option value="">{t("noProjectsForClient")}</option>

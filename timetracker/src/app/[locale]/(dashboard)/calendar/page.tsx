@@ -6,7 +6,7 @@ import {
   CalendarView,
   type CalendarEntry,
 } from "@/components/calendar/calendar-view";
-import type { TrackerProject } from "@/components/tracker/tracker-view";
+import { fetchWorkspaceProjectsForPicker } from "@/lib/projects/fetch-workspace-projects";
 
 function addDaysToYmd(ymd: string, days: number): string {
   const [y, m, d] = ymd.split("-").map(Number);
@@ -72,36 +72,10 @@ export default async function CalendarPage({
   const weekStartUtc = fromZonedTime(`${weekStart}T00:00:00`, tz);
   const weekEndUtc = new Date(weekStartUtc.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  const { data: projectRows } = await supabase
-    .from("projects")
-    .select(
-      `
-      id,
-      name,
-      color,
-      client_id,
-      is_billable,
-      clients ( id, name, default_is_billable )
-    `
-    )
-    .eq("workspace_id", profile.workspace_id)
-    .eq("is_archived", false)
-    .order("name");
-
-  const projects: TrackerProject[] = (projectRows ?? []).map((row) => {
-    const c = row.clients;
-    const clientRow = Array.isArray(c) ? c[0] : c;
-    return {
-      id: row.id,
-      name: row.name,
-      color: row.color,
-      client_id: row.client_id,
-      client_name: clientRow?.name ?? null,
-      client_default_is_billable:
-        clientRow?.default_is_billable ?? null,
-      project_is_billable: row.is_billable,
-    };
-  });
+  const { projects } = await fetchWorkspaceProjectsForPicker(
+    supabase,
+    profile.workspace_id
+  );
 
   // Fetch entries that overlap the week (started before week end AND ended after week start OR running)
   const { data: entries } = await supabase

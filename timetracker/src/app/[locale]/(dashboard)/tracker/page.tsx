@@ -5,8 +5,8 @@ import { getWorkspaceDayBoundsUtc } from "@/lib/tracker/day-bounds";
 import {
   TrackerView,
   type TrackerEntry,
-  type TrackerProject,
 } from "@/components/tracker/tracker-view";
+import { fetchWorkspaceProjectsForPicker } from "@/lib/projects/fetch-workspace-projects";
 
 export default async function TrackerPage() {
   const { user, profile } = await getWorkspaceContext();
@@ -25,36 +25,8 @@ export default async function TrackerPage() {
   const tz = ws?.timezone ?? "UTC";
   const { startUtc, endExclusiveUtc } = getWorkspaceDayBoundsUtc(tz);
 
-  const { data: projectRows } = await supabase
-    .from("projects")
-    .select(
-      `
-      id,
-      name,
-      color,
-      client_id,
-      is_billable,
-      clients ( id, name, default_is_billable )
-    `
-    )
-    .eq("workspace_id", profile.workspace_id)
-    .eq("is_archived", false)
-    .order("name");
-
-  const projects: TrackerProject[] = (projectRows ?? []).map((row) => {
-    const c = row.clients;
-    const clientRow = Array.isArray(c) ? c[0] : c;
-    return {
-      id: row.id,
-      name: row.name,
-      color: row.color,
-      client_id: row.client_id,
-      client_name: clientRow?.name ?? null,
-      client_default_is_billable:
-        clientRow?.default_is_billable ?? null,
-      project_is_billable: row.is_billable,
-    };
-  });
+  const { projects, error: projectsError } =
+    await fetchWorkspaceProjectsForPicker(supabase, profile.workspace_id);
 
   const { data: openRow, error: openErr } = await supabase
     .from("time_entries")
@@ -96,6 +68,7 @@ export default async function TrackerPage() {
       userId={user.id}
       workspaceTimezone={tz}
       projects={projects}
+      projectsLoadError={projectsError}
       runningEntry={(running as TrackerEntry | null) ?? null}
       entries={merged}
     />
