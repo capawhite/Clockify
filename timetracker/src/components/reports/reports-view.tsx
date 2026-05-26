@@ -13,7 +13,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import type {
   ProjectAgg,
@@ -61,11 +62,6 @@ export type ReportsViewProps = {
 
 function formatHours(seconds: number, digits = 2): string {
   return (seconds / 3600).toFixed(digits);
-}
-
-function csvEscape(v: string): string {
-  if (/[",\n\r]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
-  return v;
 }
 
 function buildQueryString(
@@ -181,7 +177,23 @@ export function ReportsView({
       fullName: u.name,
     })) ?? [];
 
-  const downloadCsv = () => {
+  const exportHref = useCallback(
+    (format: "csv" | "xlsx") => {
+      const q = buildQueryString({
+        from: filters.from,
+        to: filters.to,
+        user: filters.userId ?? undefined,
+        project: filters.projectId ?? undefined,
+        billable: filters.billable === "all" ? undefined : filters.billable,
+        locale,
+        format,
+      });
+      return `/api/reports/export?${q}`;
+    },
+    [filters, locale]
+  );
+
+  const onExportClick = () => {
     if (reportsTruncated) {
       toast.message(tr("exportIncompleteTitle"), {
         description: tr("exportIncompleteBody", {
@@ -189,49 +201,6 @@ export function ReportsView({
         }),
       });
     }
-    const headers = [
-      "id",
-      "user",
-      "project",
-      "description",
-      "started_at",
-      "ended_at",
-      "duration_seconds",
-      "is_billable",
-      "amount",
-    ];
-    const lines = [headers.join(",")];
-    for (const row of detailedRows) {
-      const secs = row.duration_seconds;
-      const amount =
-        row.is_billable && secs != null
-          ? (
-              (secs / 3600) *
-              Number(row.projects?.hourly_rate ?? 0)
-            ).toFixed(2)
-          : "0";
-      const vals = [
-        row.id,
-        nameByUserId[row.user_id] ?? row.user_id,
-        row.projects?.name ?? "",
-        row.description ?? "",
-        row.started_at,
-        row.ended_at ?? "",
-        secs != null ? String(secs) : "",
-        row.is_billable ? "yes" : "no",
-        amount,
-      ].map((v) => csvEscape(String(v)));
-      lines.push(vals.join(","));
-    }
-    const blob = new Blob([lines.join("\n")], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `time-entries-${filters.from}-to-${filters.to}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const visibleTabs = tabIds.filter(
@@ -398,6 +367,26 @@ export function ReportsView({
             </Button>
           </div>
         </form>
+
+        <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">{tr("exportHint")}</p>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={exportHref("csv")}
+              onClick={onExportClick}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              {tr("exportCsv")}
+            </a>
+            <a
+              href={exportHref("xlsx")}
+              onClick={onExportClick}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+            >
+              {tr("exportExcel")}
+            </a>
+          </div>
+        </div>
       </section>
 
       <div className="flex flex-wrap gap-1 border-b border-border pb-1">
@@ -731,14 +720,9 @@ export function ReportsView({
 
       {filters.tab === "detailed" ? (
         <section className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              {tr("detailedEntryCount", { count: detailedRows.length })}
-            </p>
-            <Button type="button" variant="outline" onClick={downloadCsv}>
-              {tr("exportCsv")}
-            </Button>
-          </div>
+          <p className="text-sm text-muted-foreground">
+            {tr("detailedEntryCount", { count: detailedRows.length })}
+          </p>
           <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="border-b bg-muted/40">
